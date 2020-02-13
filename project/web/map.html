@@ -1,33 +1,145 @@
 <!DOCTYPE HTML>
 <html>
-	<head>
-		<title>Generic - Projection by TEMPLATED</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<link rel="stylesheet" href="assets/css/new.css" />
-		<link rel="stylesheet" href="assets/leaflet/leaflet.css" />
-	</head>
-	
-	<body>
-		<div id="mapid"></div>
-	</body>
-	
-	<!-- Scripts -->
-	<script src="assets/leaflet/leaflet.js"></script>
-	<script type="text/javascript">
-	    // 建立 Leaflet 地圖
-	    var map = L.map('mapid');
-	  
-	    // 設定經緯度座標
-	    map.setView(new L.LatLng(22.992, 120.239), 12);
-	    
-	    var marker = L.marker([22.992, 120.239]).addTo(map);
-	    marker.bindPopup("<strong>地標</strong><br>標示的位置。");
-			    
-	    // 設定圖資來源
-	    var osmUrl='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-	    var osm = new L.TileLayer(osmUrl, {minZoom: 8, maxZoom: 16});
-	    map.addLayer(osm);
-  
-	  </script>
+
+<head>
+    <title>Generic - Projection by TEMPLATED</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="assets/css/new.css" />
+    <link rel="stylesheet" href="assets/leaflet/leaflet.css" />
+</head>
+
+<body>
+    <div id="mapid"></div>
+</body>
+
+<!-- Scripts -->
+<script src="assets/leaflet/leaflet.js"></script>
+<script>
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition,
+                function (error) {
+                    initMap({ coords: { latitude: 25.043749, longitude: 121.541795 } });
+                });
+        } else {
+            initMap({ coords: { latitude: 25.043749, longitude: 121.541795 } });
+        }
+    }
+
+    function showPosition(position) {
+        initMap(position);
+    }
+
+    var greenIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [0, 0]
+    });
+
+    var yellowIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [0, 0]
+    });
+
+    var greyIcon = new L.Icon({
+        iconUrl: 'https://github.com/pointhi/leaflet-color-markers/blob/master/img/marker-icon-2x-grey.png?raw=true',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [0, 0]
+    });
+
+    var markers = {};
+    function initMap(position) {
+        var mymap = L.map('mapid').setView([position.coords.latitude, position.coords.longitude], 15);
+        var osmUrl='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+	    var osm = new L.TileLayer(osmUrl, {minZoom: 8, maxZoom: 18});
+	    mymap.addLayer(osm);
+
+        loadMarkers(mymap.getCenter().lat, mymap.getCenter().lng);
+        mymap.on("moveend", function () {
+            loadMarkers(mymap.getCenter().lat, mymap.getCenter().lng);
+        });
+    }
+    var fetchPoint = { lat: 0, lng: 0 };
+    function loadMarkers(lat, lng) {
+        if (distance(lat, lng, fetchPoint.lat, fetchPoint.lng) > 1.5) {
+            fetchPoint.lat = lat;
+            fetchPoint.lng = lng;
+        } else {
+            return;
+        }
+        fetch('/api/station?lat=' + lat + '&lng=' + lng, { method: 'get' }).
+            then(function (response) {
+                return response.json();
+            }).
+            then(function (stations) {
+                var keys = Object.keys(stations);
+                keys.forEach(function (key) {
+                    var station = stations[key];
+                    if (!markers[key]) {
+                        var icon = greyIcon;
+                        var zindex = 0;
+                        if (station.adult_count + station.child_count > 200) {
+                            icon = greenIcon;
+                            zindex = 100;
+                        } else if (station.adult_count + station.child_count > 50) {
+                            icon = yellowIcon;
+                            zindex = 50;
+                        }
+                        var marker = L.marker([station.lat, station.lng], { icon: icon }).addTo(mymap);
+                        marker.setZIndexOffset(10 + zindex);
+                        marker.bindPopup(getStationPopUp(station));
+                        markers[key] = marker;
+                    } else {
+                        markers[key]._popup.setContent(getStationPopUp(station));
+                    }
+                });
+            }).
+            catch(function (err) {
+            })
+    }
+
+    function getStationPopUp(station) {
+        var content = '<b>' +
+            station.name + '</b><br>' +
+            station.address + '<br>' +
+            '<a href="tel:' + station.phone + '">' + station.phone + '</a>' + '<br>' +
+            '大人：' + station.adult_count + '  小孩：' + station.child_count;
+        if (station.count_updatetime) {
+            content = content + '<br>' + '更新時間:' + station.count_updatetime;
+        }
+        return content;
+    }
+
+    function distance(lat1, lon1, lat2, lon2) {
+        var R = 6371; // Radius of the earth in km
+        var dLat = (lat2 - lat1).toRad();  // Javascript functions in radians
+        var dLon = (lon2 - lon1).toRad();
+        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1.toRad()) * Math.cos(lat2.toRad()) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        var d = R * c; // Distance in km
+        return d;
+    }
+    /** Converts numeric degrees to radians */
+    if (typeof (Number.prototype.toRad) === "undefined") {
+        Number.prototype.toRad = function () {
+            return this * Math.PI / 180;
+        }
+    }
+
+    getLocation();
+</script>
+
 </html>

@@ -1,0 +1,33 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Generic - Projection by TEMPLATED</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="stylesheet" href="assets/css/new.css" />
+		<link rel="stylesheet" href="assets/leaflet/leaflet.css" />
+	</head>
+	
+	<body>
+		<div id="mapid"></div>
+	</body>
+	
+	<!-- Scripts -->
+	<script src="assets/leaflet/leaflet.js"></script>
+	<script type="text/javascript">
+	    // 建立 Leaflet 地圖
+	    var map = L.map('mapid');
+	  
+	    // 設定經緯度座標
+	    map.setView(new L.LatLng(22.992, 120.239), 12);
+	    
+	    var marker = L.marker([22.992, 120.239]).addTo(map);
+	    marker.bindPopup("<strong>地標</strong><br>標示的位置。");
+			    
+	    // 設定圖資來源
+	    var osmUrl='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+	    var osm = new L.TileLayer(osmUrl, {minZoom: 8, maxZoom: 16});
+	    map.addLayer(osm);
+  
+	  </script>
+</html>
