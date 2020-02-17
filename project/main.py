@@ -59,12 +59,26 @@ def get_coor(addr):
     browser.quit()
     return (lat, log)
 
-threads = []
-# for i in range(5):
-#   threads.append(threading.Thread(target = job, args = (i,)))
-#   threads[i].start()
-
-# def job(url):
+def update_data(row):
+    global address_dic
+    global dic
+    if not row[2] in address_dic:
+        address_dic[row[2]] = get_coor(row[2]) #return tuple
+        print("Find New", row[2], address_dic[row[2]])
+        save_data()
+            
+    demo_address_dic[row[2]] = address_dic[row[2]]
+    dic.append({
+        "id":row[0],
+        "name":row[1],
+        "address":row[2],
+        "phone":row[3],
+        "lat": address_dic[row[2]][0],
+        "lng": address_dic[row[2]][1],
+        "adult_count":row[4],
+        "child_count": row[5],
+        "updatetime": row[6]
+    })
 
 def update_mask():
     global demo_address_dic
@@ -74,33 +88,7 @@ def update_mask():
     rows = list(csv_data)
     for row in rows:
         row[2] = convert_string(row[2])
-        if not row[2] in address_dic:
-                address_dic[row[2]] = get_coor(row[2]) #return tuple
-                print("Find New", row[2], address_dic[row[2]])
-                if cnt % 5 == 0:
-                    print("[cnt]"+str(cnt))
-                    save_data()
-        elif address_dic[row[2]][0] == 0 and address_dic[row[2]][1] == 0:
-                address_dic[row[2]] = get_coor(row[2])
-                print("Update", row[2], address_dic[row[2]])
-                if cnt % 5 == 0:
-                    print("[cnt]"+str(cnt))
-                    save_data()
-        if address_dic[row[2]][0] != 0 and address_dic[row[2]][1] != 0:
-            # print("Good", row[2], address_dic[row[2]])
-            demo_address_dic[row[2]] = address_dic[row[2]]
-            dic.append({
-                "id":row[0],
-                "name":row[1],
-                "address":row[2],
-                "phone":row[3],
-                "lat": address_dic[row[2]][0],
-                "lng": address_dic[row[2]][1],
-                "adult_count":row[4],
-                "child_count": row[5],
-                "updatetime": row[6]
-            })
-    # print(dic)
+        update_data(row)
 
 def load_data():
     with open('data.json', 'r') as json_file:
@@ -155,12 +143,28 @@ print("address_dic:", ori_address_dic)
 print("data_dic:", ori_data_dic)
 update_mask()
 
+
+# get_coor_google("新北市平溪區公園街17號1樓")
+
+to_del = []
+for i in address_dic.keys():
+    flag = 0
+    for j in dic:
+        if i == j["address"]:
+            flag = 1
+            break
+    if flag == 0:
+        to_del.append(i)
+
+print(to_del)
+for i in to_del:
+    try:
+        address_dic.pop(i)    
+    except KeyError:
+        print("Key not found") 
+
 print("ori_address_dic:", ori_address_dic)
 print("ori_data_dic:", ori_data_dic)
 print("address_dic:", len(address_dic))
 print("data_dic:", len(dic))
-# get_coor_google("新北市平溪區公園街17號1樓")
-
-for i in address_dic.item():
-    if 
 save_data()
